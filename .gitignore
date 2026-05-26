@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Scrape outputs (per-source raw cache + generated chunks)
+# These get re-created on every run and can be large.
+scrape/*/raw/
+scrape/*/algo_push/
+scrape/*/state.json
+scrape/*/*.state.json
+
+# Local Notion auth (never commit)
+.notion-token
+.env
+.env.local
+*.token
+
+# 1point3acres cookie (never commit; it's session auth)
+.1p3a-cookie
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local artifacts
+*.zip
+*.log
