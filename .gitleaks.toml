@@ -1,0 +1,19 @@
+title = "prep gitleaks config"
+
+# Inherit gitleaks' default ruleset.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Paths with no real credential surface."
+paths = [
+  '''(?i)\.lock$''',
+  '''uv\.lock''',
+  '''examples/.*\.json''',
+  '''scrape/.*/raw/.*''',
+  '''algo_push/.*''',
+]
+
+[[allowlist.regexes]]
+description = "Example placeholder values in docs."
+regex = '''(?i)example|placeholder|your-token-here|xxxx'''

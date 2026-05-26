@@ -1,0 +1,20 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: pip install -e .
+      - name: Syntax check all Python sources
+        run: python -m compileall -q scripts scrape
+      - name: Validate example chunks
+        run: python scripts/validate_chunks.py examples/
