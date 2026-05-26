@@ -1,0 +1,7 @@
+# Default owner — receives review requests for any unscoped path.
+*                       @harrydaihaolin
+
+# Contract & validator are load-bearing; require explicit review.
+AGENTS.md               @harrydaihaolin
+scripts/                @harrydaihaolin
+.github/                @harrydaihaolin
