@@ -1,0 +1,41 @@
+{
+  "parent": {
+    "data_source_id": "REPLACED_BY_RECEIVER"
+  },
+  "pages": [
+    {
+      "properties": {
+        "Question": "Bank Service Maximization",
+        "Source URL": "https://www.hack2hire.com/companies/google/coding-questions/67637136cc8f5deed53ccd72/practice?questionId=6763722dcc8f5deed53ccd73",
+        "Status": "Not Started",
+        "Difficulty": "Medium",
+        "Type": "ALGORITHM",
+        "Companies": "[\"Google\"]",
+        "Stage": "Onsite",
+        "Tags": "[\"Sliding Window\", \"Two Pointers\"]",
+        "Acceptance Rate": 0.5695,
+        "date:Last Reported:start": "2026-05-24",
+        "date:Last Reported:is_datetime": 0
+      },
+      "icon": "🎯",
+      "content": "<callout icon=\"🎯\" color=\"blue_bg\">\n**TL;DR**\n\nConsider a bank with an initial amount of money and a series of transactions. Each transaction is represented as an integer in an array: positive values indicate deposits and negative values indicate withdrawals. The bank can choose which customer to serve first and can skip any number of customers initially. However, once the bank starts serving, it must continue sequentially until serving a...\n</callout>\n\n## 📋 Problem\n\nConsider a bank with an initial amount of money and a series of transactions. Each transaction is represented as an integer in an array: positive values indicate deposits and negative values indicate withdrawals. The bank can choose which customer to serve first and can skip any number of customers initially. However, once the bank starts serving, it must continue sequentially until serving a customer becomes impossible due to insufficient balance.  \n\nMaximize the total number of customers the bank can serve.\n\n**Constraints:**\n- The initial amount is a non-negative integer.\n- Transactions array contains integers that can be positive or negative.\n- The bank must serve customers sequentially once started.\n\n**Example 1:**\n> **Input:** initialAmount = 1, transactions = [1, -3, 5, -2, 1]\n**Output:** 3 \n**Explanation:** Starting with the deposit of `5`: 1 + 5 = 6, 6 - 2 = 4, 4 + 1 = 5. Three customers served.\n\n**Example 2:**\n> **Input:** initialAmount = 5, transactions = [-2, -3, -1, -4]\n**Output:** 2\n**Explanation:** Starting from the beginning, the bank can serve two customers: 5 - 2 = 3, 3 - 3 = 0.\n\n**Example 3:**\n> **Input:** initialAmount = 10, transactions = [5, -6, 3, -2, 4]\n**Output:** 5\n\n## 💡 Hints\n\n<details>\n<summary>Hint 1</summary>\n\nConsider maintaining a window that grows as long as the cumulative balance remains non-negative, and shrinks when it violates the constraint.\n\n</details>\n\n<details>\n<summary>Hint 2</summary>\n\nUse two pointers to track the window boundaries; advance the start index and subtract exiting transactions until the balance recovers to a valid state.\n\n</details>\n\n## 🧪 Test Cases\n\n<details>\n<summary>Case 1 — test</summary>\n\n**Input**\n```\n```\n\n**Expected**\n```\n3\n```\n</details>\n\n<details>\n<summary>Case 2 — test</summary>\n\n**Input**\n```\n```\n\n**Expected**\n```\n2\n```\n</details>\n\n_…3 more cases on the source page._\n\n## 📝 My Notes\n\n_(Your approach, complexity analysis, mistakes…)_\n\n```python\n# TBD\n```\n\n## 🔍 AI Insights\n\n**What this tests**\n- Sliding window technique for dynamic range expansion and contraction\n- Running sum tracking and boundary condition handling\n- Optimizing brute-force approaches to linear time complexity\n- Pointer manipulation with state validation\n\n**Common patterns** — Sliding Window · Two Pointers\n\n**Likely follow-ups**\n- How would the approach change if the constraint requiring sequential processing could be relaxed?\n- What edge cases arise when all transactions are negative versus a mix of large deposits and withdrawals?\n- Can you adapt this solution to handle real-time streaming transactions without storing the entire array?\n\n---\n\n**Source:** [Hack2hire — Bank Service Maximization](https://www.hack2hire.com/companies/google/coding-questions/67637136cc8f5deed53ccd72/practice?questionId=6763722dcc8f5deed53ccd73)"
+    },
+    {
+      "properties": {
+        "Question": "Date Validator",
+        "Source URL": "https://www.hack2hire.com/companies/google/coding-questions/6764929acc8f5deed53ccd75/practice?questionId=6764932ccc8f5deed53ccd76",
+        "Status": "Not Started",
+        "Difficulty": "Easy",
+        "Type": "ALGORITHM",
+        "Companies": "[\"Google\"]",
+        "Stage": "Onsite",
+        "Tags": "[\"Strings\"]",
+        "Acceptance Rate": 0.8155,
+        "date:Last Reported:start": "2026-04-04",
+        "date:Last Reported:is_datetime": 0
+      },
+      "icon": "🔠",
+      "content": "<callout icon=\"🎯\" color=\"blue_bg\">\n**TL;DR**\n\nGiven three integers, determine whether they can form a valid date in any standard date format. A date is considered valid if the integers can represent a date in formats such as `yyyy-MM-dd`, `MM-dd-yyyy`, or `dd-MM-yyyy`. All possible valid date formats should be considered, and the year should be within the range `1` to `9999`. The month must be between `1` and `12`, and the day must be valid...\n</callout>\n\n## 📋 Problem\n\nGiven three integers, determine whether they can form a valid date in any standard date format. A date is considered valid if the integers can represent a date in formats such as `yyyy-MM-dd`, `MM-dd-yyyy`, or `dd-MM-yyyy`. All possible valid date formats should be considered, and the year should be within the range `1` to `9999`. The month must be between `1` and `12`, and the day must be valid for the given month and year, taking leap years into account. \n\n**Constraints:**\n- `1 <= a, b, c <= 9999`\n\n**Example 1:**\n> **Input:** a = 2020, b = 2, c = 29\n**Output:** true\n**Explanation:** The integers can form the date February 29, 2020 (`2020-02-29`), which is a valid leap day.\n\n**Example 2:**\n> **Input:** a = 2019, b = 2, c = 29\n**Output:** false\n**Explanation:** 2019 is not a leap year, so February 29, 2019 is invalid.\n\n**Example 3:**\n> **Input:** a = 12, b = 31, c = 2021\n**Output:** true\n**Explanation:** The integers can form December 31, 2021 (`2021-12-31`), which is a valid date.\n\n## 💡 Hints\n\n<details>\n<summary>Hint 1</summary>\n\nSort the three values first to eliminate duplicate permutations, then systematically assign them to year, month, and day while verifying February's length using the 4/100/400 leap year rule.\n\n</details>\n\n## 🧪 Test Cases\n\n<details>\n<summary>Case 1 — test</summary>\n\n**Input**\n```\n```\n\n**Expected**\n```\ntrue\n```\n</details>\n\n<details>\n<summary>Case 2 — test</summary>\n\n**Input**\n```\n```\n\n**Expected**\n```\nnull\n```\n</details>\n\n_…3 more cases on the source page._\n\n## 📝 My Notes\n\n_(Your approach, complexity analysis, mistakes…)_\n\n```python\n# TBD\n```\n\n## 🔍 AI Insights\n\n**What this tests**\n- Permutation evaluation and case reduction\n- Calendar validation and boundary checking\n- Leap year rule implementation\n- Logical branching and early termination\n\n**Common patterns** — Sorting\n\n**Likely follow-ups**\n- How would you refactor this to parse and validate arbitrary date format strings passed at runtime?\n- What architectural changes would be required to support historical calendar shifts or timezone-aware validation?\n\n---\n\n**Source:** [Hack2hire — Date Validator](https://www.hack2hire.com/companies/google/coding-questions/6764929acc8f5deed53ccd75/practice?questionId=6764932ccc8f5deed53ccd76)"
+    }
+  ]
+}
