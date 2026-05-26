@@ -205,16 +205,19 @@ def validate_chunk(path: Path) -> list[str]:
 
 def main() -> int:
     if len(sys.argv) != 2:
-        print("Usage: validate_chunks.py <algo_push_dir>")
+        print("Usage: validate_chunks.py <algo_push_dir_or_chunk.json>")
         return 2
-    root = Path(sys.argv[1]).expanduser().resolve()
-    if not root.is_dir():
-        print(f"ERROR: {root} is not a directory")
-        return 2
+    target = Path(sys.argv[1]).expanduser().resolve()
 
-    chunks = sorted(root.glob("chunk_*.json"))
-    if not chunks:
-        print(f"ERROR: no chunk_*.json files in {root}")
+    if target.is_file():
+        chunks = [target]
+    elif target.is_dir():
+        chunks = sorted(target.glob("chunk_*.json"))
+        if not chunks:
+            print(f"ERROR: no chunk_*.json files in {target}")
+            return 2
+    else:
+        print(f"ERROR: {target} is not a file or directory")
         return 2
 
     all_errs: list[str] = []

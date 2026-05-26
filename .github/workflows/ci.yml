@@ -16,5 +16,5 @@ jobs:
         run: pip install -e .
       - name: Syntax check all Python sources
         run: python -m compileall -q scripts scrape
-      - name: Validate example chunks
-        run: python scripts/validate_chunks.py examples/
+      - name: Validate example chunk
+        run: python scripts/validate_chunks.py examples/example_chunk.json

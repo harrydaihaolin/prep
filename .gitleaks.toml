@@ -5,7 +5,7 @@ title = "prep gitleaks config"
 useDefault = true
 
 [allowlist]
-description = "Paths with no real credential surface."
+description = "Paths and placeholder values with no real credential surface."
 paths = [
   '''(?i)\.lock$''',
   '''uv\.lock''',
@@ -13,7 +13,6 @@ paths = [
   '''scrape/.*/raw/.*''',
   '''algo_push/.*''',
 ]
-
-[[allowlist.regexes]]
-description = "Example placeholder values in docs."
-regex = '''(?i)example|placeholder|your-token-here|xxxx'''
+regexes = [
+  '''(?i)example|placeholder|your-token-here|xxxx''',
+]
