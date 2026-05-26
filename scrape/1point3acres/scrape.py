@@ -120,9 +120,22 @@ def is_login_wall(body: str) -> bool:
     return has_login_form and not has_content
 
 
+_DISCUZ_UID = re.compile(r"discuz_uid\s*=\s*'(\d+)'")
+
+
 def is_authed(body: str) -> bool:
-    """Heuristic: a page that shows the logout link belongs to an authed user."""
-    return ("action=logout" in body) or (">退出</a>" in body)
+    """Discuz prints `discuz_uid = '<n>'` in inline JS on every page.
+    `0` means anonymous; any positive integer is a real logged-in user.
+    This is the most reliable auth signal — the username greeting and
+    logout link both depend on theme variants.
+    """
+    m = _DISCUZ_UID.search(body)
+    return bool(m and m.group(1) != "0")
+
+
+def authed_uid(body: str) -> str | None:
+    m = _DISCUZ_UID.search(body)
+    return m.group(1) if (m and m.group(1) != "0") else None
 
 
 def probe(session: requests.Session) -> int:
@@ -130,20 +143,19 @@ def probe(session: requests.Session) -> int:
     if not body:
         print("FAIL: could not fetch /forum.php")
         return 1
-    m_user = re.search(r"欢迎您[,，]\s*<a[^>]*>([^<]+)</a>", body)
-    if is_authed(body):
-        if m_user:
-            print(f"OK: authenticated as {m_user.group(1).strip()}")
-        else:
-            print("OK: authenticated (logout link present)")
+    uid = authed_uid(body)
+    if uid:
+        m_user = re.search(r"欢迎您[,，]\s*<a[^>]*>([^<]+)</a>", body)
+        name = m_user.group(1).strip() if m_user else f"uid={uid}"
+        print(f"OK: authenticated as {name}")
         return 0
-    print("WARN: not authenticated.")
+    print("WARN: not authenticated (server returned discuz_uid='0').")
     print("  Board listings will still work (titles, ids, dates are public).")
     print("  Thread bodies may be partial — many 面经 threads hide content")
     print("  for non-authed users. To unlock full content, copy the FULL")
     print("  `Cookie:` header from a logged-in browser session and export it")
-    print("  as ACRES_COOKIE (the single _auth cookie is not enough — Discuz")
-    print("  needs _saltkey, _sid, and a few others together).")
+    print("  as ACRES_COOKIE. Discuz needs _auth and _saltkey at minimum,")
+    print("  and the _auth cookie expires — re-copy if it's older than ~1 day.")
     return 0  # not a hard failure; let the user proceed if they want
 
 
