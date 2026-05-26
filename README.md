@@ -4,6 +4,26 @@ A drop-in spec + tooling so your scraping agent (Claude, Cursor, anything that r
 
 You don't push to Notion. You scrape a site, produce a folder of JSON files, and zip it back. I run the upload on my side.
 
+## Install
+
+```bash
+pip install -e .
+# or, with uv:
+uv sync
+```
+
+## Run
+
+```bash
+python3 scripts/validate_chunks.py algo_push/
+```
+
+## Test
+
+```bash
+python3 scripts/validate_chunks.py examples/
+```
+
 ## What's in here
 
 | Path | Purpose |
