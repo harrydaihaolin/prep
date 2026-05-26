@@ -87,64 +87,99 @@ def make_session(cookie_header: str) -> requests.Session:
     return s
 
 
-def fetch(session: requests.Session, url: str, *, allow_login_redirect: bool = False) -> str | None:
+def fetch(session: requests.Session, url: str, *, require_auth: bool = False) -> str | None:
+    """GET a page. Returns the decoded body (GBK→str) or None on hard failure.
+
+    Login-wall detection is intentionally non-fatal here — board listings,
+    thread metadata, and partial bodies are readable without auth. Pass
+    `require_auth=True` to reject pages that look like a pure login form.
+    """
     r = session.get(url, timeout=20, allow_redirects=False)
     if r.status_code in (301, 302, 303):
         loc = r.headers.get("Location", "")
-        if not allow_login_redirect and ("logging" in loc or "login" in loc):
-            print(f"  AUTH FAIL: redirect to {loc[:120]}", file=sys.stderr)
+        if "logging" in loc or "login" in loc or "member.php" in loc:
+            print(f"  redirect to login: {loc[:120]}", file=sys.stderr)
+            if require_auth:
+                return None
             return None
-        return fetch(session, loc if loc.startswith("http") else f"{BASE}/{loc.lstrip('/')}")
+        return fetch(session, loc if loc.startswith("http") else f"{BASE}/{loc.lstrip('/')}", require_auth=require_auth)
     if r.status_code != 200:
         print(f"  HTTP {r.status_code} fetching {url}", file=sys.stderr)
         return None
-    # Discuz pages are GBK-encoded
     body = r.content.decode("gbk", errors="ignore")
-    # Detect "you need to login" pages that come back as 200
-    if "您还未登录" in body or "您需要先登录" in body or "请先登录后才能继续" in body:
-        if not allow_login_redirect:
-            print(f"  AUTH FAIL: login wall on {url[:120]}", file=sys.stderr)
-            return None
+    if require_auth and is_login_wall(body):
+        print(f"  AUTH FAIL: login wall on {url[:120]}", file=sys.stderr)
+        return None
     return body
 
 
+def is_login_wall(body: str) -> bool:
+    """Heuristic: a page that's ~just a login form, not a content page."""
+    has_login_form = "您还未登录" in body or "登录可查看更多" in body
+    has_content = "normalthread" in body or 'class="t_f"' in body or "thread_subject" in body
+    return has_login_form and not has_content
+
+
+def is_authed(body: str) -> bool:
+    """Heuristic: a page that shows the logout link belongs to an authed user."""
+    return ("action=logout" in body) or (">退出</a>" in body)
+
+
 def probe(session: requests.Session) -> int:
-    body = fetch(session, f"{BASE}/forum.php", allow_login_redirect=True)
+    body = fetch(session, f"{BASE}/forum.php")
     if not body:
         print("FAIL: could not fetch /forum.php")
         return 1
-    # Look for username greeting `欢迎您, <name>` and logout link
     m_user = re.search(r"欢迎您[,，]\s*<a[^>]*>([^<]+)</a>", body)
-    has_logout = "退出" in body or "action=logout" in body
-    if has_logout and m_user:
-        print(f"OK: authenticated as {m_user.group(1).strip()}")
+    if is_authed(body):
+        if m_user:
+            print(f"OK: authenticated as {m_user.group(1).strip()}")
+        else:
+            print("OK: authenticated (logout link present)")
         return 0
-    if has_logout:
-        print("OK: authenticated (logout link present)")
-        return 0
-    print("FAIL: not authenticated (no logout link, login form present).")
-    print("  Re-export your cookies; you probably only have the _auth cookie")
-    print("  and are missing _saltkey or _sid. Copy the FULL Cookie header.")
-    return 1
+    print("WARN: not authenticated.")
+    print("  Board listings will still work (titles, ids, dates are public).")
+    print("  Thread bodies may be partial — many 面经 threads hide content")
+    print("  for non-authed users. To unlock full content, copy the FULL")
+    print("  `Cookie:` header from a logged-in browser session and export it")
+    print("  as ACRES_COOKIE (the single _auth cookie is not enough — Discuz")
+    print("  needs _saltkey, _sid, and a few others together).")
+    return 0  # not a hard failure; let the user proceed if they want
 
 
-THREAD_LINK = re.compile(r'<a[^>]+href="(?:forum\.php\?mod=viewthread&tid=|thread-)(\d+)[^"]*"[^>]*class="[^"]*xst[^"]*"[^>]*>([^<]+)</a>')
+# Discuz thread anchors on board pages look like:
+#   <a href="thread-1177999-1-1.html"  onclick="atarget(this)" class="s xst">Title</a>
+# or
+#   <a href="forum.php?mod=viewthread&tid=1177999&extra=" class="s xst">Title</a>
+THREAD_LINK = re.compile(
+    r'<a\s+href="(?:thread-(\d+)-\d+-\d+\.html|forum\.php\?mod=viewthread&(?:amp;)?tid=(\d+)[^"]*)"'
+    r'[^>]*class="[^"]*\bxst\b[^"]*"[^>]*>([^<]+)</a>'
+)
 
 
 def list_board(session: requests.Session, fid: int, pages: int) -> list[dict]:
     """List thread metadata across `pages` of a board (fid = forum id)."""
     threads: list[dict] = []
+    seen: set[int] = set()
     for page in range(1, pages + 1):
         url = f"{BASE}/forum.php?mod=forumdisplay&fid={fid}&page={page}"
         body = fetch(session, url)
         if not body:
             break
+        added = 0
         for m in THREAD_LINK.finditer(body):
-            tid = int(m.group(1))
-            title = re.sub(r"<[^>]+>", "", m.group(2)).strip()
+            tid = int(m.group(1) or m.group(2))
+            if tid in seen:
+                continue
+            seen.add(tid)
+            title = re.sub(r"<[^>]+>", "", m.group(3)).strip()
             threads.append({"tid": tid, "title": title,
                             "url": f"{BASE}/forum.php?mod=viewthread&tid={tid}"})
-        print(f"page {page}: {len(threads)} threads cumulative")
+            added += 1
+        print(f"page {page}: +{added} new (cumulative {len(threads)})")
+        if added == 0:
+            print("  (no new threads on this page; stopping)")
+            break
         time.sleep(random.uniform(1.5, 3.5))
     return threads
 
@@ -184,8 +219,7 @@ def cmd_probe(args):
 
 def cmd_board(args):
     sess = make_session(load_cookie_header())
-    if probe(sess) != 0:
-        return 1
+    probe(sess)  # informational; board listings work without auth
     threads = list_board(sess, args.fid, args.pages)
     out = OUTPUT_DIR / f"board_{args.fid}_threads.json"
     out.write_text(json.dumps(threads, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -195,8 +229,7 @@ def cmd_board(args):
 
 def cmd_thread(args):
     sess = make_session(load_cookie_header())
-    if probe(sess) != 0:
-        return 1
+    probe(sess)
     for tid in args.tids:
         out = OUTPUT_DIR / f"thread_{tid}.json"
         if out.exists() and not args.force:
@@ -215,8 +248,7 @@ def cmd_thread(args):
 def cmd_drain(args):
     """Read board_*.json files and fetch every uncached thread."""
     sess = make_session(load_cookie_header())
-    if probe(sess) != 0:
-        return 1
+    probe(sess)
     tids: list[int] = []
     for f in OUTPUT_DIR.glob("board_*_threads.json"):
         for t in json.loads(f.read_text(encoding="utf-8")):

@@ -121,18 +121,44 @@ STAGE_HINTS = [
 
 # --- HTML → markdown -------------------------------------------------------
 
+def _strip_balanced_div(s: str, css_class_substr: str) -> str:
+    """Remove `<div class="…{css_class_substr}…">` and its full body (balanced
+    over nested divs). Discuz nests these — a naive regex fails on deep nesting.
+    """
+    target = re.compile(rf'<div[^>]*class="[^"]*{re.escape(css_class_substr)}[^"]*"[^>]*>')
+    out = []
+    i = 0
+    while i < len(s):
+        m = target.search(s, i)
+        if not m:
+            out.append(s[i:])
+            break
+        out.append(s[i:m.start()])
+        # Walk forward over balanced <div> ... </div>
+        depth = 1
+        j = m.end()
+        while j < len(s) and depth > 0:
+            n_open = s.find("<div", j)
+            n_close = s.find("</div>", j)
+            if n_close == -1:
+                j = len(s); break
+            if 0 <= n_open < n_close:
+                depth += 1
+                j = n_open + 4
+            else:
+                depth -= 1
+                j = n_close + len("</div>")
+        i = j
+    return "".join(out)
+
+
+# Things to drop wholesale (NOT regex over balanced divs — see _strip_balanced_div)
 DISCUZ_NOISE = [
-    # ".attach_nopermission_notice" etc. = "you need to log in to view"
-    re.compile(r'<div[^>]*class="[^"]*attach_nopermission_notice[^"]*"[^>]*>.*?</div>', re.DOTALL),
-    re.compile(r'<div[^>]*id="attach_[^"]*"[^>]*>.*?</div>', re.DOTALL),
     re.compile(r'<script[^>]*>.*?</script>', re.DOTALL),
     re.compile(r'<style[^>]*>.*?</style>', re.DOTALL),
     re.compile(r'<!--.*?-->', re.DOTALL),
-    # Discuz signature / "本帖最后由..."
-    re.compile(r'<div[^>]*class="[^"]*tipi_click[^"]*"[^>]*>.*?</div>', re.DOTALL),
     re.compile(r'本帖最后由[^\n<]*?编辑\s*'),
-    # "(?需登?录回?复)" / "已隐藏" inline notices
-    re.compile(r'.\s*需\s*登录\s*[^<\n]*', re.IGNORECASE),
+    re.compile(r'<span[^>]*class="[^"]*atips_close[^"]*"[^>]*>.*?</span>', re.DOTALL),
 ]
 
 TAG_REWRITE = [
@@ -163,14 +189,19 @@ TAG_REWRITE = [
 
 
 def html_to_md(s: str) -> str:
+    # Drop attachment / login-wall blocks before any tag rewriting
+    for cls in ("attach_nopermission", "attach_tips", "tipi_click", "locked", "showhide"):
+        s = _strip_balanced_div(s, cls)
     for pat in DISCUZ_NOISE:
         s = pat.sub("", s)
     for pat, repl in TAG_REWRITE:
         s = pat.sub(repl, s)
-    # Strip residual tags
     s = re.sub(r"<[^>]+>", "", s)
     s = html.unescape(s)
+    # Discuz inserts `&nbsp;` everywhere; replace with space
+    s = s.replace("\xa0", " ")
     s = re.sub(r"\n{3,}", "\n\n", s)
+    s = re.sub(r"[ \t]+\n", "\n", s)
     return s.strip()
 
 
@@ -312,16 +343,27 @@ def render_page(thread: dict) -> dict | None:
     ]
     content = "\n".join(content_parts)
 
+    # 1point3acres doesn't record difficulty explicitly; default to Medium
+    # since the 面经 board is almost entirely Medium/Hard interview material.
+    # Override per-thread later if a tag like "Easy" / "Hard" appears in the
+    # title prefix.
+    diff = "Medium"
+    t_lower = title.lower()
+    if any(k in t_lower for k in ("hard ", "[hard]", "困难")):
+        diff = "Hard"
+    elif any(k in t_lower for k in ("easy ", "[easy]", "简单")):
+        diff = "Easy"
+
     props = {
         "Question": title[:200],
         "Source URL": thread["url"],
         "Status": "Not Started",
+        "Difficulty": diff,
         "Type": typ,
         "Companies": json.dumps(companies if companies else ["Unknown"], ensure_ascii=False),
         "Stage": stage,
         "Tags": json.dumps(tags, ensure_ascii=False),
     }
-    # Difficulty: rarely declared on 1point3acres, omit by default (validator allows it)
     return {
         "properties": props,
         "icon": icon,
